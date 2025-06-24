@@ -1,0 +1,13 @@
+{
+    "agent_id": "alert_triage",
+    "name": "Alert Triage Agent",
+    "description": "Ensemble-based risk assessment for AML alerts",
+    "model_path": "scripts/models",
+    "thresholds": {
+        "high_risk_score": 0.8,
+        "medium_risk_score": 0.5,
+        "auto_escalate_score": 0.9,
+        "auto_dismiss_score": 0.1
+    },
+    "data_root": "data"
+}

@@ -1,0 +1,42 @@
+{
+  "feature_columns": [
+    "amount",
+    "log_amount",
+    "is_round_amount",
+    "high_amount",
+    "risk_score",
+    "cross_border",
+    "unusual_hour",
+    "hour",
+    "day_of_week",
+    "is_weekend",
+    "is_business_hours",
+    "orig_tx_count",
+    "orig_total_amount",
+    "orig_avg_amount",
+    "orig_ml_rate",
+    "transaction_type"
+  ],
+  "categorical_features": [
+    "transaction_type"
+  ],
+  "model_performance": {
+    "random_forest": 0.9333453178623957,
+    "xgboost": 0.9243732636051641,
+    "catboost": 0.9395979735250858,
+    "ensemble": 0.9342506945579343
+  },
+  "ensemble_method": "weighted",
+  "ensemble_weights": [
+    0.3336573818206462,
+    0.33045000286268794,
+    0.3358926153166659
+  ],
+  "models_included": [
+    "random_forest",
+    "xgboost",
+    "catboost"
+  ],
+  "training_date": "2025-06-19T09:15:36.426985",
+  "catboost_available": true
+}

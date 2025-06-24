@@ -1,0 +1,392 @@
+{
+  "agent_config": {
+    "name": "PatternAnalysisAgent",
+    "version": "1.0.0",
+    "description": "Advanced pattern analysis for AML investigations using ML models and graph analytics",
+    "model_name": "gemini-2.0-flash-exp",
+    "author": "AML Investigation System",
+    "created_date": "2025-06-21",
+    "agent_type": "pattern_analysis",
+    "execution_mode": "inference_only"
+  },
+  "environment_variables": {
+    "AGENT_NAME": "PatternAnalysisAgent",
+    "AGENT_VERSION": "1.0.0", 
+    "MODEL_NAME": "gemini-2.0-flash-exp",
+    "PATTERN_MODEL_PATH": "models/pattern_analysis",
+    "TRANSACTION_DATA_PATH": "../../data/processed/features/feature_enhanced_data.parquet",
+    "ANOMALY_SENSITIVITY": "0.1",
+    "TYPOLOGY_CONFIDENCE_THRESHOLD": "0.7",
+    "MAX_PROCESSING_TIME": "180",
+    "ENABLE_NETWORK_ANALYSIS": "true",
+    "ENABLE_CACHING": "true"
+  },
+  "data_configuration": {
+    "primary_data_source": "../../data/processed/features/feature_enhanced_data.parquet",
+    "fallback_data_sources": [
+      "../../data/processed/saml_d_processed.parquet",
+      "../../data/processed/ibm_aml_processed.parquet",
+      "../../data/processed/maryam_processed.parquet"
+    ],
+    "required_columns": [
+      "transaction_id",
+      "originator_account", 
+      "beneficiary_account",
+      "amount",
+      "transaction_date"
+    ],
+    "optional_columns": [
+      "cross_border",
+      "is_laundering",
+      "risk_score",
+      "transaction_type",
+      "currency",
+      "country_orig",
+      "country_benef"
+    ],
+    "data_validation": {
+      "min_transactions_for_analysis": 10,
+      "max_accounts_per_analysis": 500,
+      "required_data_quality_score": 0.7
+    }
+  },
+  "model_configuration": {
+    "model_path": "models/pattern_analysis",
+    "scaler_path": "models/pattern_analysis/scalers",
+    "metadata_file": "model_metadata.json",
+    "model_categories": {
+      "amount_anomaly": {
+        "models": ["isolation_forest", "local_outlier_factor", "elliptic_envelope", "one_class_svm"],
+        "contamination": 0.1,
+        "consensus_threshold": 2,
+        "feature_count": 4,
+        "scaler_type": "RobustScaler"
+      },
+      "behavioral_clustering": {
+        "models": ["dbscan", "kmeans", "isolation_forest"],
+        "feature_count": 10,
+        "scaler_type": "StandardScaler",
+        "clustering_params": {
+          "dbscan_eps": 0.5,
+          "dbscan_min_samples": 5,
+          "kmeans_clusters": 8
+        }
+      },
+      "velocity_anomaly": {
+        "models": ["velocity_isolation_forest", "velocity_lof", "velocity_one_class_svm", "velocity_clustering"],
+        "contamination": 0.15,
+        "feature_count": 14,
+        "scaler_type": "StandardScaler",
+        "temporal_window_hours": 24
+      },
+      "network_anomaly": {
+        "models": ["pca", "isolation_forest", "network_clustering"],
+        "feature_count": 12,
+        "scaler_type": "StandardScaler",
+        "pca_components": 8,
+        "network_clusters": 5,
+        "centrality_threshold_percentile": 95
+      }
+    },
+    "model_loading": {
+      "load_on_startup": true,
+      "lazy_loading": false,
+      "cache_models": true,
+      "validate_models": true
+    }
+  },
+  "analysis_parameters": {
+    "default_analysis_period_days": 90,
+    "max_processing_time_seconds": 180,
+    "anomaly_sensitivity": 0.1,
+    "typology_confidence_threshold": 0.7,
+    "min_transaction_count_for_analysis": 10,
+    "max_accounts_per_analysis": 500,
+    "enable_caching": true,
+    "cache_expiry_hours": 24,
+    "parallel_processing": false,
+    "batch_size": 100
+  },
+  "typology_detection": {
+    "enable_typology_detection": true,
+    "supported_typologies": ["STRUCTURING", "LAYERING", "ROUND_TRIPPING", "SMURFING"],
+    "typologies": {
+      "STRUCTURING": {
+        "enable": true,
+        "description": "Breaking large amounts into smaller transactions to avoid reporting thresholds",
+        "threshold_amount": 10000,
+        "time_window_hours": 24,
+        "min_transactions": 3,
+        "proximity_percentage": 10,
+        "additional_thresholds": [15000, 25000],
+        "confidence_weights": {
+          "amount_proximity": 0.4,
+          "timing_coordination": 0.3,
+          "frequency": 0.3
+        }
+      },
+      "LAYERING": {
+        "enable": true,
+        "description": "Complex series of transactions through multiple intermediaries to obscure money trail",
+        "min_chain_length": 3,
+        "max_chain_length": 8,
+        "time_window_hours": 72,
+        "amount_similarity_threshold": 0.15,
+        "max_analysis_paths": 10,
+        "confidence_weights": {
+          "chain_complexity": 0.4,
+          "amount_consistency": 0.3,
+          "timing_patterns": 0.3
+        }
+      },
+      "ROUND_TRIPPING": {
+        "enable": true,
+        "description": "Circular transaction flows that return funds to the originating account",
+        "min_cycle_length": 2,
+        "max_cycle_length": 6,
+        "max_net_change_ratio": 0.1,
+        "time_window_hours": 168,
+        "max_cycles_to_analyze": 5,
+        "confidence_weights": {
+          "cycle_completion": 0.5,
+          "amount_preservation": 0.3,
+          "timing_efficiency": 0.2
+        }
+      },
+      "SMURFING": {
+        "enable": true,
+        "description": "Using multiple accounts or individuals to conduct coordinated transactions",
+        "coordination_window_minutes": 30,
+        "min_coordinated_accounts": 3,
+        "amount_similarity_threshold": 0.1,
+        "timing_tolerance_minutes": 15,
+        "confidence_weights": {
+          "coordination_timing": 0.4,
+          "amount_similarity": 0.4,
+          "account_diversity": 0.2
+        }
+      }
+    }
+  },
+  "network_analysis": {
+    "enable_network_analysis": true,
+    "graph_construction": {
+      "directed_graph": true,
+      "weighted_edges": true,
+      "self_loops": false,
+      "multiple_edges": true,
+      "node_attributes": ["total_sent", "total_received", "transaction_count"],
+      "edge_attributes": ["weight", "count"]
+    },
+    "centrality_analysis": {
+      "enable_degree_centrality": true,
+      "enable_betweenness_centrality": true,
+      "enable_closeness_centrality": true,
+      "anomaly_percentile_threshold": 95,
+      "max_nodes_for_expensive_calculations": 1000,
+      "betweenness_sample_size": 100
+    },
+    "flow_analysis": {
+      "enable_flow_analysis": true,
+      "detect_flow_imbalances": true,
+      "detect_circular_flows": true,
+      "detect_money_mules": true,
+      "imbalance_ratio_threshold": 10.0,
+      "mule_score_threshold": 0.7,
+      "circular_flow_tolerance": 0.1
+    },
+    "community_detection": {
+      "enable_community_analysis": false,
+      "min_community_size": 3,
+      "max_communities_to_analyze": 20
+    },
+    "performance_limits": {
+      "max_network_size": 10000,
+      "max_centrality_calculations": 1000,
+      "max_path_length": 6,
+      "timeout_seconds": 60
+    }
+  },
+  "risk_scoring": {
+    "enable_risk_scoring": true,
+    "scoring_method": "weighted_composite",
+    "component_weights": {
+      "amount_anomalies": 0.25,
+      "behavioral_anomalies": 0.20,
+      "velocity_anomalies": 0.15,
+      "network_anomalies": 0.15,
+      "typology_detection": 0.25
+    },
+    "risk_thresholds": {
+      "minimal_risk": 0.3,
+      "low_risk": 0.5,
+      "medium_risk": 0.7,
+      "high_risk": 0.8,
+      "critical_risk": 0.9
+    },
+    "confidence_calculation": {
+      "data_quality_weight": 0.3,
+      "model_consensus_weight": 0.4,
+      "typology_confidence_weight": 0.3,
+      "min_confidence_threshold": 0.5
+    },
+    "risk_adjustments": {
+      "consensus_boost_per_model": 0.05,
+      "typology_boost_multiplier": 0.3,
+      "max_risk_score": 0.98
+    }
+  },
+  "performance_optimization": {
+    "enable_parallel_processing": false,
+    "max_workers": 1,
+    "memory_management": {
+      "max_memory_usage_gb": 4,
+      "enable_data_chunking": true,
+      "max_accounts_per_chunk": 100,
+      "garbage_collection_frequency": 10
+    },
+    "caching": {
+      "enable_result_caching": true,
+      "cache_size_mb": 256,
+      "enable_model_caching": true,
+      "cache_ttl_hours": 24
+    },
+    "optimization_settings": {
+      "limit_expensive_calculations": true,
+      "max_centrality_nodes": 1000,
+      "max_path_analysis_depth": 4,
+      "max_cycles_to_analyze": 10,
+      "early_termination_enabled": true
+    }
+  },
+  "output_configuration": {
+    "include_detailed_evidence": true,
+    "include_ml_model_details": true,
+    "include_confidence_scores": true,
+    "include_processing_metrics": true,
+    "include_raw_predictions": false,
+    "max_examples_per_pattern": 5,
+    "max_evidence_items": 50,
+    "precision_decimal_places": 4,
+    "compress_large_outputs": true,
+    "output_formats": ["json"]
+  },
+  "logging_and_monitoring": {
+    "log_level": "INFO",
+    "log_file": "pattern_analysis.log",
+    "log_rotation": {
+      "max_file_size_mb": 100,
+      "backup_count": 5
+    },
+    "performance_monitoring": {
+      "track_processing_times": true,
+      "track_memory_usage": true,
+      "track_model_performance": true,
+      "track_anomaly_rates": true,
+      "track_cache_hit_rates": true
+    },
+    "alerts": {
+      "enable_performance_alerts": true,
+      "max_processing_time_warning": 120,
+      "memory_usage_warning_percentage": 80,
+      "model_error_threshold": 5,
+      "anomaly_rate_threshold": 0.5
+    },
+    "metrics_collection": {
+      "collect_statistics": true,
+      "statistics_window_hours": 24,
+      "export_metrics": false
+    }
+  },
+  "integration_settings": {
+    "alert_triage_agent": {
+      "enable_integration": true,
+      "share_risk_scores": true,
+      "cross_validate_findings": true,
+      "risk_score_weight": 0.3
+    },
+    "evidence_collection_agent": {
+      "enable_integration": true,
+      "request_additional_data": true,
+      "validate_network_relationships": true,
+      "evidence_validation_threshold": 0.8
+    },
+    "coordinator_agent": {
+      "enable_integration": true,
+      "report_completion_status": true,
+      "escalation_thresholds": {
+        "high_confidence_typology": 0.8,
+        "multiple_typologies": 2,
+        "critical_network_anomaly": true,
+        "consensus_anomaly_threshold": 3
+      },
+      "auto_escalation_enabled": true
+    },
+    "external_systems": {
+      "enable_external_validation": false,
+      "api_timeout_seconds": 30,
+      "retry_attempts": 3
+    }
+  },
+  "regulatory_compliance": {
+    "jurisdiction": "US",
+    "reporting_requirements": {
+      "sar_threshold_confidence": 0.7,
+      "typology_reporting_threshold": 0.6,
+      "network_anomaly_reporting": true,
+      "auto_reporting_enabled": false
+    },
+    "documentation_requirements": {
+      "maintain_audit_trail": true,
+      "evidence_retention_days": 1825,
+      "include_model_explanations": true,
+      "include_confidence_assessments": true,
+      "include_processing_metadata": true
+    },
+    "compliance_checks": {
+      "validate_regulatory_thresholds": true,
+      "enforce_documentation_standards": true,
+      "audit_trail_completeness": true
+    }
+  },
+  "security_settings": {
+    "data_encryption": {
+      "encrypt_sensitive_data": false,
+      "encryption_algorithm": "AES-256"
+    },
+    "access_control": {
+      "enable_access_logging": true,
+      "session_timeout_minutes": 60
+    },
+    "data_protection": {
+      "anonymize_account_numbers": false,
+      "data_retention_policy": "regulatory_required"
+    }
+  },
+  "validation_and_testing": {
+    "enable_self_validation": true,
+    "model_validation": {
+      "cross_validation_enabled": false,
+      "performance_monitoring": true,
+      "anomaly_rate_monitoring": true,
+      "drift_detection": false
+    },
+    "data_validation": {
+      "validate_input_data": true,
+      "check_data_quality": true,
+      "handle_missing_values": true
+    },
+    "minimum_sample_sizes": {
+      "amount_analysis": 10,
+      "behavioral_analysis": 5,
+      "velocity_analysis": 10,
+      "network_analysis": 3
+    },
+    "testing_configuration": {
+      "enable_unit_tests": true,
+      "enable_integration_tests": true,
+      "test_data_path": "tests/data",
+      "mock_external_services": true
+    }
+  }
+}

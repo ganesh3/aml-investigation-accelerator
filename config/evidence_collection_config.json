@@ -1,0 +1,50 @@
+{
+    "agent_id": "evidence_collection",
+    "name": "Evidence Collection Agent",
+    "description": "Comprehensive evidence gathering for AML investigations",
+    "data_root": "data",
+    "collection_settings": {
+        "transaction_lookback_days": 365,
+        "max_related_accounts": 50,
+        "max_transactions_per_account": 1000,
+        "include_historical_alerts": true,
+        "deep_investigation_threshold": 0.8
+    },
+    "data_sources": {
+        "sanctions_lists": {
+            "ofac_sdn": "data/raw/sanctions/ofac_sdn_list.csv",
+            "un_sanctions": "data/raw/sanctions/un_sanctions_list.csv",
+            "eu_sanctions": "data/raw/sanctions/eu_sanctions_list.csv"
+        },
+        "external_apis": {
+            "kyc_provider": {
+                "enabled": false,
+                "api_key": "placeholder",
+                "base_url": "https://api.example-kyc.com"
+            },
+            "sanctions_api": {
+                "enabled": false,
+                "api_key": "placeholder", 
+                "base_url": "https://api.sanctions-check.com"
+            }
+        }
+    },
+    "evidence_types": [
+        "transaction_history",
+        "account_relationships", 
+        "sanctions_screening",
+        "kyc_documents",
+        "risk_indicators",
+        "regulatory_filings"
+    ],
+    "output_formats": [
+        "structured_json",
+        "investigation_package",
+        "regulatory_report"
+    ],
+    "performance_targets": {
+        "max_collection_time_seconds": 30,
+        "min_evidence_completeness": 0.85,
+        "max_concurrent_collections": 5
+    }
+}

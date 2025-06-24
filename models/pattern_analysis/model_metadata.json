@@ -1,0 +1,63 @@
+{
+  "training_timestamp": "2025-06-22T08:34:36.752212",
+  "model_categories": [
+    "amount_anomaly",
+    "behavioral_clustering",
+    "velocity_anomaly",
+    "network_anomaly"
+  ],
+  "models_trained": {
+    "amount_anomaly": [
+      "isolation_forest",
+      "local_outlier_factor",
+      "elliptic_envelope",
+      "one_class_svm"
+    ],
+    "behavioral_clustering": [
+      "dbscan",
+      "kmeans",
+      "isolation_forest"
+    ],
+    "velocity_anomaly": [
+      "velocity_isolation_forest",
+      "velocity_lof",
+      "velocity_one_class_svm",
+      "velocity_clustering"
+    ],
+    "network_anomaly": [
+      "pca",
+      "isolation_forest",
+      "network_clustering"
+    ]
+  },
+  "model_counts": {
+    "amount_anomaly": 4,
+    "behavioral_clustering": 3,
+    "velocity_anomaly": 4,
+    "network_anomaly": 3
+  },
+  "scalers_saved": [
+    "amount",
+    "behavioral",
+    "velocity",
+    "network"
+  ],
+  "total_models_saved": 14,
+  "velocity_models": [
+    "velocity_isolation_forest",
+    "velocity_lof",
+    "velocity_one_class_svm",
+    "velocity_clustering"
+  ],
+  "network_stats": {
+    "nodes": 548,
+    "edges": 5760
+  },
+  "training_config": {
+    "amount_anomaly_contamination": 0.1,
+    "behavioral_clusters": 8,
+    "velocity_contamination": 0.15,
+    "network_pca_components": 8,
+    "network_clusters": 5
+  }
+}
