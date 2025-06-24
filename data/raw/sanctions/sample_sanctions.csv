@@ -1,6 +1,0 @@
-name,type,country,sanctions_program,list_type
-SUSPECTED ENTITY A,Entity,Country A,Program 1,SDN
-SUSPICIOUS PERSON B,Individual,Country B,Program 2,SDN
-BLOCKED COMPANY C,Entity,Country C,Program 1,Consolidated
-SANCTIONED INDIVIDUAL D,Individual,Country D,Program 3,SDN
-RESTRICTED ORGANIZATION E,Entity,Country E,Program 2,Consolidated
