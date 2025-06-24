@@ -169,5 +169,4 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
-
-D:\Google-ADK-Project\data\rawdata/  
+"data"  
