@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-AML Alert Triage Agent - Google ADK Implementation
+AML Alert Triage Agent - Google ADK Implementation (FIXED)
 Uses ensemble ML models for intelligent alert prioritization and risk assessment
 """
 
@@ -8,7 +8,7 @@ import os
 import json
 import joblib
 import numpy as np
-import pandas as pd
+import pandas as pd  # ENSURE THIS IS AT TOP LEVEL
 from pathlib import Path
 from typing import Dict, Any, List, Optional
 from datetime import datetime
@@ -103,257 +103,11 @@ def load_ensemble_models():
         return False
 
 # =============================================================================
-# ADK Tool Functions (These become the agent's capabilities)
-# =============================================================================
-
-def assess_transaction_risk(
-    transaction_id: str,
-    amount: float,
-    cross_border: bool = False,
-    unusual_hour: bool = False,
-    originator_account: str = "",
-    beneficiary_account: str = "",
-    **kwargs
-) -> Dict[str, Any]:
-    """
-    Assess money laundering risk for a transaction using ensemble ML models.
-    
-    This function analyzes transaction patterns and characteristics to determine
-    the likelihood of money laundering activity. It uses a combination of
-    Random Forest, XGBoost, and CatBoost models for accurate risk assessment.
-    
-    Args:
-        transaction_id: Unique transaction identifier
-        amount: Transaction amount in USD
-        cross_border: Whether transaction crosses international borders
-        unusual_hour: Whether transaction occurs outside business hours
-        originator_account: Source account identifier
-        beneficiary_account: Destination account identifier
-    
-    Returns:
-        Dict containing comprehensive risk assessment with score, priority, 
-        confidence level, reasoning, and recommended actions
-    """
-    global MODELS, SCALER, FEATURE_COLUMNS, AGENT_STATS
-    
-    start_time = datetime.now()
-    
-    try:
-        # Ensure models are loaded
-        if not MODELS:
-            success = load_ensemble_models()
-            if not success:
-                return {
-                    'transaction_id': transaction_id,
-                    'risk_score': 0.5,
-                    'priority_level': 'MEDIUM',
-                    'confidence': 0.5,
-                    'error': 'ML models not available - using default risk score',
-                    'recommended_action': 'MANUAL_REVIEW'
-                }
-        
-        logger.info(f"Assessing risk for transaction {transaction_id}, amount: ${amount:,.2f}")
-        
-        # Prepare features for ML models
-        features = prepare_transaction_features(
-            amount=amount,
-            cross_border=cross_border,
-            unusual_hour=unusual_hour,
-            **kwargs
-        )
-        
-        # Get ensemble prediction
-        risk_assessment = calculate_ensemble_risk(features)
-        
-        # Determine priority and actions
-        priority_info = determine_priority_level(risk_assessment, amount)
-        
-        # Update statistics
-        AGENT_STATS['alerts_processed'] += 1
-        if priority_info['priority_level'] in ['HIGH', 'CRITICAL']:
-            AGENT_STATS['high_risk_alerts'] += 1
-        if priority_info.get('auto_action') == 'ESCALATE':
-            AGENT_STATS['auto_escalated'] += 1
-        elif priority_info.get('auto_action') == 'DISMISS':
-            AGENT_STATS['auto_dismissed'] += 1
-        
-        processing_time = (datetime.now() - start_time).total_seconds()
-        AGENT_STATS['total_processing_time'] += processing_time
-        
-        # Build comprehensive result
-        result = {
-            'transaction_id': transaction_id,
-            'timestamp': datetime.now().isoformat(),
-            'risk_score': risk_assessment['risk_score'],
-            'confidence': risk_assessment['confidence'],
-            'priority_level': priority_info['priority_level'],
-            'recommended_action': priority_info['recommended_action'],
-            'auto_action': priority_info.get('auto_action'),
-            'reasoning': risk_assessment['reasoning'],
-            'model_predictions': risk_assessment['individual_predictions'],
-            'processing_time_ms': processing_time * 1000,
-            'transaction_details': {
-                'amount': amount,
-                'cross_border': cross_border,
-                'unusual_hour': unusual_hour,
-                'originator_account': originator_account,
-                'beneficiary_account': beneficiary_account
-            }
-        }
-        
-        logger.info(f"Risk assessment completed for {transaction_id}: {risk_assessment['risk_score']:.3f} ({priority_info['priority_level']})")
-        return result
-        
-    except Exception as e:
-        logger.error(f"Risk assessment failed for {transaction_id}: {e}")
-        return {
-            'transaction_id': transaction_id,
-            'risk_score': 0.5,
-            'priority_level': 'MEDIUM',
-            'confidence': 0.5,
-            'error': str(e),
-            'recommended_action': 'MANUAL_REVIEW'
-        }
-
-def get_agent_status() -> Dict[str, Any]:
-    """
-    Get current status and performance metrics of the Alert Triage Agent.
-    
-    Returns comprehensive information about agent health, model status,
-    processing statistics, and operational metrics.
-    
-    Returns:
-        Dict containing agent status, statistics, and capability information
-    """
-    try:
-        avg_processing_time = (
-            AGENT_STATS['total_processing_time'] / max(AGENT_STATS['alerts_processed'], 1)
-        ) * 1000  # Convert to milliseconds
-        
-        high_risk_rate = (
-            AGENT_STATS['high_risk_alerts'] / max(AGENT_STATS['alerts_processed'], 1)
-        ) * 100
-        
-        return {
-            'agent_info': {
-                'name': os.getenv('AGENT_NAME', 'AlertTriageAgent'),
-                'version': os.getenv('AGENT_VERSION', '1.0.0'),
-                'description': os.getenv('AGENT_DESCRIPTION', 'ML-powered AML alert triage'),
-                'status': 'active'
-            },
-            'model_status': {
-                'models_loaded': list(MODELS.keys()),
-                'model_count': len(MODELS),
-                'feature_count': len(FEATURE_COLUMNS),
-                'scaler_loaded': SCALER is not None,
-                'model_performance': MODEL_PERFORMANCE
-            },
-            'processing_statistics': {
-                'alerts_processed': AGENT_STATS['alerts_processed'],
-                'high_risk_alerts': AGENT_STATS['high_risk_alerts'],
-                'auto_escalated': AGENT_STATS['auto_escalated'],
-                'auto_dismissed': AGENT_STATS['auto_dismissed'],
-                'high_risk_rate_percent': round(high_risk_rate, 2),
-                'average_processing_time_ms': round(avg_processing_time, 2),
-                'total_processing_time_seconds': round(AGENT_STATS['total_processing_time'], 2)
-            },
-            'capabilities': [
-                'ensemble_ml_risk_scoring',
-                'automated_alert_prioritization',
-                'real_time_risk_assessment',
-                'intelligent_escalation',
-                'performance_monitoring',
-                'reasoning_generation'
-            ],
-            'configuration': {
-                'high_risk_threshold': float(os.getenv('HIGH_RISK_THRESHOLD', '0.8')),
-                'auto_escalate_threshold': float(os.getenv('AUTO_ESCALATE_THRESHOLD', '0.9')),
-                'auto_dismiss_threshold': float(os.getenv('AUTO_DISMISS_THRESHOLD', '0.1')),
-                'max_processing_time': int(os.getenv('MAX_PROCESSING_TIME', '30')),
-                'cache_enabled': os.getenv('ENABLE_CACHE', 'True').lower() == 'true'
-            },
-            'timestamp': datetime.now().isoformat()
-        }
-        
-    except Exception as e:
-        return {
-            'agent_info': {
-                'name': 'AlertTriageAgent',
-                'status': 'error',
-                'error': str(e)
-            },
-            'timestamp': datetime.now().isoformat()
-        }
-
-def batch_assess_transactions(transactions: List[Dict[str, Any]]) -> Dict[str, Any]:
-    """
-    Process multiple transactions in batch for improved efficiency.
-    
-    Analyzes a batch of transactions and provides both individual assessments
-    and aggregate statistics for operational insights.
-    
-    Args:
-        transactions: List of transaction dictionaries with required fields
-        
-    Returns:
-        Dict containing individual results and batch summary statistics
-    """
-    try:
-        logger.info(f"Processing batch of {len(transactions)} transactions")
-        
-        results = []
-        for transaction in transactions:
-            result = assess_transaction_risk(**transaction)
-            results.append(result)
-        
-        # Calculate batch statistics
-        risk_scores = [r.get('risk_score', 0) for r in results]
-        processing_times = [r.get('processing_time_ms', 0) for r in results]
-        
-        batch_summary = {
-            'batch_info': {
-                'total_transactions': len(results),
-                'processing_timestamp': datetime.now().isoformat(),
-                'batch_processing_time_ms': sum(processing_times)
-            },
-            'risk_distribution': {
-                'critical_count': len([r for r in results if r.get('priority_level') == 'CRITICAL']),
-                'high_count': len([r for r in results if r.get('priority_level') == 'HIGH']),
-                'medium_count': len([r for r in results if r.get('priority_level') == 'MEDIUM']),
-                'low_count': len([r for r in results if r.get('priority_level') == 'LOW'])
-            },
-            'actions_summary': {
-                'auto_escalated': len([r for r in results if r.get('auto_action') == 'ESCALATE']),
-                'auto_dismissed': len([r for r in results if r.get('auto_action') == 'DISMISS']),
-                'manual_review_required': len([r for r in results if r.get('recommended_action') == 'INVESTIGATE'])
-            },
-            'risk_statistics': {
-                'average_risk_score': round(np.mean(risk_scores), 3),
-                'max_risk_score': round(max(risk_scores), 3),
-                'min_risk_score': round(min(risk_scores), 3),
-                'high_risk_rate_percent': round((len([r for r in results if r.get('risk_score', 0) > 0.7]) / len(results)) * 100, 2)
-            }
-        }
-        
-        return {
-            'results': results,
-            'batch_summary': batch_summary
-        }
-        
-    except Exception as e:
-        logger.error(f"Batch processing failed: {e}")
-        return {
-            'error': str(e),
-            'results': [],
-            'batch_summary': {}
-        }
-
-# =============================================================================
 # Helper Functions
 # =============================================================================
 
 def prepare_transaction_features(amount: float, cross_border: bool, unusual_hour: bool, **kwargs) -> np.ndarray:
-    """Prepare transaction features for model prediction"""
+    """Prepare transaction features for model prediction - FIXED VERSION"""
     
     # Calculate derived features
     log_amount = np.log(max(amount, 1))
@@ -408,18 +162,18 @@ def prepare_transaction_features(amount: float, cross_border: bool, unusual_hour
         value = feature_dict.get(feature_name, 0)
         if isinstance(value, bool):
             value = int(value)
-        elif pd.isna(value):
+        elif pd.isna(value):  # NOW pd IS PROPERLY IMPORTED
             value = 0
         features.append(float(value))
     
-    # Create DataFrame with feature names for scaler compatibility
-    import pandas as pd
-    features_df = pd.DataFrame([features], columns=FEATURE_COLUMNS)
-    features_array = features_df.values
+    # Create numpy array first
+    features_array = np.array([features])
     
     # Apply scaling if available
     if SCALER is not None:
         try:
+            # FIXED: Create DataFrame with proper column names for scaler
+            features_df = pd.DataFrame(features_array, columns=FEATURE_COLUMNS)
             features_array = SCALER.transform(features_df)
         except Exception as scaler_error:
             logger.warning(f"Scaler transform failed: {scaler_error}")
@@ -563,6 +317,254 @@ def determine_priority_level(risk_assessment: Dict[str, Any], amount: float) -> 
         })
     
     return priority_info
+
+# =============================================================================
+# ADK Tool Functions (These become the agent's capabilities)
+# =============================================================================
+
+def assess_transaction_risk(
+    transaction_id: str,
+    amount: float,
+    cross_border: bool = False,
+    unusual_hour: bool = False,
+    originator_account: str = "",
+    beneficiary_account: str = "",
+    **kwargs
+) -> Dict[str, Any]:
+    """
+    Assess money laundering risk for a transaction using ensemble ML models.
+    
+    This function analyzes transaction patterns and characteristics to determine
+    the likelihood of money laundering activity. It uses a combination of
+    Random Forest, XGBoost, and CatBoost models for accurate risk assessment.
+    
+    Args:
+        transaction_id: Unique transaction identifier
+        amount: Transaction amount in USD
+        cross_border: Whether transaction crosses international borders
+        unusual_hour: Whether transaction occurs outside business hours
+        originator_account: Source account identifier
+        beneficiary_account: Destination account identifier
+    
+    Returns:
+        Dict containing comprehensive risk assessment with score, priority, 
+        confidence level, reasoning, and recommended actions
+    """
+    global MODELS, SCALER, FEATURE_COLUMNS, AGENT_STATS
+    
+    start_time = datetime.now()
+    
+    try:
+        # Ensure models are loaded
+        if not MODELS:
+            success = load_ensemble_models()
+            if not success:
+                return {
+                    'transaction_id': transaction_id,
+                    'risk_score': 0.5,
+                    'priority_level': 'MEDIUM',
+                    'confidence': 0.5,
+                    'error': 'ML models not available - using default risk score',
+                    'recommended_action': 'MANUAL_REVIEW'
+                }
+        
+        logger.info(f"Assessing risk for transaction {transaction_id}, amount: ${amount:,.2f}")
+        
+        # Prepare features for ML models
+        features = prepare_transaction_features(
+            amount=amount,
+            cross_border=cross_border,
+            unusual_hour=unusual_hour,
+            **kwargs
+        )
+        
+        # Get ensemble prediction
+        risk_assessment = calculate_ensemble_risk(features)
+        
+        # Determine priority and actions
+        priority_info = determine_priority_level(risk_assessment, amount)
+        
+        # Update statistics
+        AGENT_STATS['alerts_processed'] += 1
+        if priority_info['priority_level'] in ['HIGH', 'CRITICAL']:
+            AGENT_STATS['high_risk_alerts'] += 1
+        if priority_info.get('auto_action') == 'ESCALATE':
+            AGENT_STATS['auto_escalated'] += 1
+        elif priority_info.get('auto_action') == 'DISMISS':
+            AGENT_STATS['auto_dismissed'] += 1
+        
+        processing_time = (datetime.now() - start_time).total_seconds()
+        AGENT_STATS['total_processing_time'] += processing_time
+        
+        # Build comprehensive result
+        result = {
+            'transaction_id': transaction_id,
+            'timestamp': datetime.now().isoformat(),
+            'risk_score': risk_assessment['risk_score'],
+            'confidence': risk_assessment['confidence'],
+            'priority_level': priority_info['priority_level'],
+            'recommended_action': priority_info['recommended_action'],
+            'auto_action': priority_info.get('auto_action'),
+            'reasoning': risk_assessment['reasoning'],
+            'model_predictions': risk_assessment['individual_predictions'],
+            'processing_time_ms': processing_time * 1000,
+            'transaction_details': {
+                'amount': amount,
+                'cross_border': cross_border,
+                'unusual_hour': unusual_hour,
+                'originator_account': originator_account,
+                'beneficiary_account': beneficiary_account
+            }
+        }
+        
+        logger.info(f"Risk assessment completed for {transaction_id}: {risk_assessment['risk_score']:.3f} ({priority_info['priority_level']})")
+        return result
+        
+    except Exception as e:
+        logger.error(f"Risk assessment failed for {transaction_id}: {e}")
+        import traceback
+        traceback.print_exc()
+        return {
+            'transaction_id': transaction_id,
+            'risk_score': 0.5,
+            'priority_level': 'MEDIUM',
+            'confidence': 0.5,
+            'error': f'Risk assessment failed: {str(e)}',
+            'recommended_action': 'MANUAL_REVIEW'
+        }
+
+def get_agent_status() -> Dict[str, Any]:
+    """
+    Get current status and performance metrics of the Alert Triage Agent.
+    
+    Returns comprehensive information about agent health, model status,
+    processing statistics, and operational metrics.
+    
+    Returns:
+        Dict containing agent status, statistics, and capability information
+    """
+    try:
+        avg_processing_time = (
+            AGENT_STATS['total_processing_time'] / max(AGENT_STATS['alerts_processed'], 1)
+        ) * 1000  # Convert to milliseconds
+        
+        high_risk_rate = (
+            AGENT_STATS['high_risk_alerts'] / max(AGENT_STATS['alerts_processed'], 1)
+        ) * 100
+        
+        return {
+            'agent_info': {
+                'name': os.getenv('AGENT_NAME', 'AlertTriageAgent'),
+                'version': os.getenv('AGENT_VERSION', '1.0.0'),
+                'description': os.getenv('AGENT_DESCRIPTION', 'ML-powered AML alert triage'),
+                'status': 'active'
+            },
+            'model_status': {
+                'models_loaded': list(MODELS.keys()),
+                'model_count': len(MODELS),
+                'feature_count': len(FEATURE_COLUMNS),
+                'scaler_loaded': SCALER is not None,
+                'model_performance': MODEL_PERFORMANCE
+            },
+            'processing_statistics': {
+                'alerts_processed': AGENT_STATS['alerts_processed'],
+                'high_risk_alerts': AGENT_STATS['high_risk_alerts'],
+                'auto_escalated': AGENT_STATS['auto_escalated'],
+                'auto_dismissed': AGENT_STATS['auto_dismissed'],
+                'high_risk_rate_percent': round(high_risk_rate, 2),
+                'average_processing_time_ms': round(avg_processing_time, 2),
+                'total_processing_time_seconds': round(AGENT_STATS['total_processing_time'], 2)
+            },
+            'capabilities': [
+                'ensemble_ml_risk_scoring',
+                'automated_alert_prioritization',
+                'real_time_risk_assessment',
+                'intelligent_escalation',
+                'performance_monitoring',
+                'reasoning_generation'
+            ],
+            'configuration': {
+                'high_risk_threshold': float(os.getenv('HIGH_RISK_THRESHOLD', '0.8')),
+                'auto_escalate_threshold': float(os.getenv('AUTO_ESCALATE_THRESHOLD', '0.9')),
+                'auto_dismiss_threshold': float(os.getenv('AUTO_DISMISS_THRESHOLD', '0.1')),
+                'max_processing_time': int(os.getenv('MAX_PROCESSING_TIME', '30')),
+                'cache_enabled': os.getenv('ENABLE_CACHE', 'True').lower() == 'true'
+            },
+            'timestamp': datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        return {
+            'agent_info': {
+                'name': 'AlertTriageAgent',
+                'status': 'error',
+                'error': str(e)
+            },
+            'timestamp': datetime.now().isoformat()
+        }
+
+def batch_assess_transactions(transactions: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Process multiple transactions in batch for improved efficiency.
+    
+    Analyzes a batch of transactions and provides both individual assessments
+    and aggregate statistics for operational insights.
+    
+    Args:
+        transactions: List of transaction dictionaries with required fields
+        
+    Returns:
+        Dict containing individual results and batch summary statistics
+    """
+    try:
+        logger.info(f"Processing batch of {len(transactions)} transactions")
+        
+        results = []
+        for transaction in transactions:
+            result = assess_transaction_risk(**transaction)
+            results.append(result)
+        
+        # Calculate batch statistics
+        risk_scores = [r.get('risk_score', 0) for r in results]
+        processing_times = [r.get('processing_time_ms', 0) for r in results]
+        
+        batch_summary = {
+            'batch_info': {
+                'total_transactions': len(results),
+                'processing_timestamp': datetime.now().isoformat(),
+                'batch_processing_time_ms': sum(processing_times)
+            },
+            'risk_distribution': {
+                'critical_count': len([r for r in results if r.get('priority_level') == 'CRITICAL']),
+                'high_count': len([r for r in results if r.get('priority_level') == 'HIGH']),
+                'medium_count': len([r for r in results if r.get('priority_level') == 'MEDIUM']),
+                'low_count': len([r for r in results if r.get('priority_level') == 'LOW'])
+            },
+            'actions_summary': {
+                'auto_escalated': len([r for r in results if r.get('auto_action') == 'ESCALATE']),
+                'auto_dismissed': len([r for r in results if r.get('auto_action') == 'DISMISS']),
+                'manual_review_required': len([r for r in results if r.get('recommended_action') == 'INVESTIGATE'])
+            },
+            'risk_statistics': {
+                'average_risk_score': round(np.mean(risk_scores), 3),
+                'max_risk_score': round(max(risk_scores), 3),
+                'min_risk_score': round(min(risk_scores), 3),
+                'high_risk_rate_percent': round((len([r for r in results if r.get('risk_score', 0) > 0.7]) / len(results)) * 100, 2)
+            }
+        }
+        
+        return {
+            'results': results,
+            'batch_summary': batch_summary
+        }
+        
+    except Exception as e:
+        logger.error(f"Batch processing failed: {e}")
+        return {
+            'error': str(e),
+            'results': [],
+            'batch_summary': {}
+        }
 
 # =============================================================================
 # Google ADK Agent Definition
